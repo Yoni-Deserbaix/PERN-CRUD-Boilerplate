@@ -1,6 +1,10 @@
 import { Request, Response } from "express";
 import { z } from "zod";
-import { loginUser, registerUser } from "../services/authService";
+import {
+  loginUser,
+  registerUser,
+  resetUserPassword,
+} from "../services/authService";
 import { AuthenticatedRequest } from "../types/express";
 
 const handleErrorResponse = (res: Response, error: unknown) => {
@@ -51,6 +55,23 @@ export const getCurrentUser = async (
   } catch (error) {
     console.error("Error retrieving current user:", error);
     res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+export const resetPassword = async (
+  req: AuthenticatedRequest,
+  res: Response
+): Promise<void> => {
+  try {
+    if (!req.user) {
+      res.status(401).json({ message: "Unauthorized: No user found" });
+      return;
+    }
+
+    const user = await resetUserPassword(req.user.userId, req.body);
+    res.status(200).json({ message: "Password reset successful", user });
+  } catch (error) {
+    handleErrorResponse(res, error);
   }
 };
 
