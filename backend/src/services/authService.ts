@@ -3,7 +3,11 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { JWT_SECRET, SALT_ROUNDS, TOKEN_EXPIRY } from "../config/config";
 import prisma from "../prisma/prismaClient";
-import { loginSchema, registerSchema } from "../schemas/authSchema";
+import {
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from "../schemas/authSchema";
 
 export const registerUser = async (data: z.infer<typeof registerSchema>) => {
   const { name, email, password, confirmPassword } = registerSchema.parse(data);
@@ -40,4 +44,22 @@ export const loginUser = async (data: z.infer<typeof loginSchema>) => {
 
   const { password: _, ...userWithoutPassword } = user;
   return { user: userWithoutPassword, token };
+};
+
+export const resetUserPassword = async (
+  userId: string,
+  data: z.infer<typeof resetPasswordSchema>
+) => {
+  const { password, confirmPassword } = resetPasswordSchema.parse(data);
+
+  if (password !== confirmPassword) throw new Error("Passwords do not match");
+
+  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+  const user = await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedPassword },
+  });
+
+  const { password: _, ...userWithoutPassword } = user;
+  return userWithoutPassword;
 };
